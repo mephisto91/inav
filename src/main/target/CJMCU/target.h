@@ -45,7 +45,7 @@
 #define USE_SPI
 #define USE_SPI_DEVICE_1
 
-#define USE_RX_NRF24
+//#define USE_RX_NRF24
 #ifdef USE_RX_NRF24
 
 #define NRF24_SPI_INSTANCE      SPI1
@@ -67,7 +67,7 @@
 #define SPI1_MISO_PIN           NRF24_MISO_PIN
 #define SPI1_MOSI_PIN           NRF24_MOSI_PIN
 
-#define USE_RX_NRF24
+//#define USE_RX_NRF24
 #define USE_RX_CX10
 #define USE_RX_H8_3D
 #define USE_RX_INAV

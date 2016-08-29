@@ -47,7 +47,7 @@
 #define I2C_DEVICE              (I2CDEV_1)
 
 #define DEFAULT_RX_FEATURE      FEATURE_RX_NRF24
-#define USE_RX_NRF24
+//#define USE_RX_NRF24
 //#define USE_RX_CX10
 //#define USE_RX_H8_3D
 #define USE_RX_SYMA

@@ -95,8 +95,8 @@
 
 #define BARO
 #define USE_BARO_MS5611 // needed for Flip32 board
-#define USE_BARO_BMP085
-//#define USE_BARO_BMP280
+//#define USE_BARO_BMP085
+#define USE_BARO_BMP280
 
 #define MAG
 #define USE_MAG_HMC5883
@@ -150,8 +150,9 @@
 //#define NRF24_DEFAULT_PROTOCOL  NRF24RX_CX10A
 //#define NRF24_DEFAULT_PROTOCOL  NRF24RX_V202_1M
 
-#define USE_SOFTSPI
-#define USE_NRF24_SOFTSPI
+//#define USE_SOFTSPI
+//#define USE_NRF24_SOFTSPI
+
 // RC pinouts
 // RC1              GND
 // RC2              power

@@ -96,7 +96,7 @@
 #define UART3_TX_PIN            PB10 // PB10 (AF7)
 #define UART3_RX_PIN            PB11 // PB11 (AF7)
 
-#define USE_RX_NRF24
+//#define USE_RX_NRF24
 #define NRF24_SPI_INSTANCE      SPI2
 #define USE_RX_CX10
 #define USE_RX_H8_3D

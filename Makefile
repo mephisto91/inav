@@ -570,9 +570,13 @@ VPATH        := $(VPATH):$(STDPERIPH_DIR)/src
 #
 
 # Tool names
-CC          = arm-none-eabi-gcc
-OBJCOPY     = arm-none-eabi-objcopy
-SIZE        = arm-none-eabi-size
+#CC          = arm-none-eabi-gcc
+#OBJCOPY     = arm-none-eabi-objcopy
+#SIZE        = arm-none-eabi-size
+
+CC          = ~/dev/gcc-arm-none-eabi-5_3-2016q1/bin/arm-none-eabi-gcc
+OBJCOPY     = ~/dev/gcc-arm-none-eabi-5_3-2016q1/bin/arm-none-eabi-objcopy
+SIZE        = ~/dev/gcc-arm-none-eabi-5_3-2016q1/bin/arm-none-eabi-size
 
 #
 # Tool options.
