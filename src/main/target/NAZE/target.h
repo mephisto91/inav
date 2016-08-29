@@ -174,6 +174,9 @@
 #define NRF24_MISO_PIN                  PB0
 #endif // USE_NRF24
 
+#define USE_SOFT_SPI
+#define NRF24_ARD
+
 #define USE_ADC
 #define CURRENT_METER_ADC_PIN   PB1
 #define VBAT_ADC_PIN            PA4

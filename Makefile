@@ -424,6 +424,7 @@ COMMON_SRC = \
             rx/sumd.c \
             rx/sumh.c \
             rx/xbus.c \
+            rx/nRF24L01.c \
             scheduler/scheduler.c \
             scheduler/scheduler_tasks.c \
             sensors/acceleration.c \

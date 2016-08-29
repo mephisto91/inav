@@ -850,9 +850,14 @@ void activateConfig(void)
 
 static void validateAndFixConfig(void)
 {
-    if (!(featureConfigured(FEATURE_RX_PARALLEL_PWM) || featureConfigured(FEATURE_RX_PPM) || featureConfigured(FEATURE_RX_SERIAL) || featureConfigured(FEATURE_RX_MSP) || featureConfigured(FEATURE_RX_NRF24))) {
-         featureSet(DEFAULT_RX_FEATURE);
-     }
+    if (!(featureConfigured(FEATURE_RX_PARALLEL_PWM) ||
+          featureConfigured(FEATURE_RX_PPM) ||
+          featureConfigured(FEATURE_RX_SERIAL) ||
+          featureConfigured(FEATURE_RX_MSP) ||
+          featureConfigured(FEATURE_RX_NRF24) ||
+          featureConfigured(FEATURE_RX_NRF24_ARD))) {
+        featureSet(DEFAULT_RX_FEATURE);
+    }
 
      if (featureConfigured(FEATURE_RX_PPM)) {
          featureClear(FEATURE_RX_SERIAL | FEATURE_RX_PARALLEL_PWM | FEATURE_RX_MSP | FEATURE_RX_NRF24);

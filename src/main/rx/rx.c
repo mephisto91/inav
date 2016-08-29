@@ -57,6 +57,7 @@
 #include "rx/ibus.h"
 #include "rx/jetiexbus.h"
 #include "rx/nrf24.h"
+#include "rx/nRF24L01.h"
 
 #include "rx/rx.h"
 
@@ -201,6 +202,13 @@ void rxInit(rxConfig_t *rxConfig, modeActivationCondition_t *modeActivationCondi
             featureClear(FEATURE_RX_NRF24);
             rcReadRawFunc = nullReadRawRC;
         }
+    }
+#endif
+    
+#ifdef NRF24_ARD
+    if (feature(FEATURE_RX_NRF24_ARD)) {
+        rxRefreshRate = 11000; //edit
+        rxNRF24InitArd(&rxRuntimeConfig, &rcReadRawFunc); //channel data goes to rcReadRawFunc
     }
 #endif
 
@@ -361,10 +369,11 @@ void updateRx(uint32_t currentTime)
         }
     }
 #endif
-
-#ifdef USE_RX_NRF24
-    if (feature(FEATURE_RX_NRF24)) {
-        rxDataReceived = rxNrf24DataReceived();
+    
+    //edit
+#ifdef NRF24_ARD
+    if (feature(FEATURE_RX_NRF24_ARD)) {
+        rxDataReceived = rxNRF24ReceivePacketArd();
         if (rxDataReceived) {
             rxSignalReceived = true;
             rxIsInFailsafeMode = false;
@@ -372,6 +381,7 @@ void updateRx(uint32_t currentTime)
         }
     }
 #endif
+    //edit end
 
 #ifndef SKIP_RX_MSP
     if (feature(FEATURE_RX_MSP)) {
