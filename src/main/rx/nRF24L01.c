@@ -30,7 +30,6 @@
 
 // GND  --> any ground pin
 // VCC  --> 3v supply
-// CE   --> tied to VCC
 // CSN  --> receiver pin 5
 // SCK  --> receiver pin 6
 // MISO --> receiver pin 7
