@@ -549,6 +549,7 @@ bool rxNRF24ReceivePacketArd()
     
     if (now - telemetryLastSendTime > TELEM_SEND_DELAY) {
         telem.vbat = vbat;
+        
         /*
         if (STATE(GPS_FIX)) {
             telem.latitude = gpsSol.llh.lat;

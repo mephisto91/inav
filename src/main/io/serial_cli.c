@@ -855,6 +855,11 @@ const clivalue_t valueTable[] = {
     { "accgain_x",                  VAR_INT16  | MASTER_VALUE, &masterConfig.accGain.raw[X], .config.minmax = { 1,  8192 }, 0 },
     { "accgain_y",                  VAR_INT16  | MASTER_VALUE, &masterConfig.accGain.raw[Y], .config.minmax = { 1,  8192 }, 0 },
     { "accgain_z",                  VAR_INT16  | MASTER_VALUE, &masterConfig.accGain.raw[Z], .config.minmax = { 1,  8192 }, 0 },
+#ifdef NRF24_ARD
+    {"nrf_channel",                 VAR_UINT16  | MASTER_VALUE, &masterConfig.nrfChannel, .config.minmax = {0, 125}, 0},
+    {"nrf_reading_pipe",            VAR_UINT32  | MASTER_VALUE, &masterConfig.nrfReadingPipe, .config.minmax = {0x0000, 0xFFFF}, 0x0000},
+    {"nrf_writing_pipe",            VAR_UINT32  | MASTER_VALUE, &masterConfig.nrfWritingPipe, .config.minmax = {0x0000, 0xFFFF}, 0x0001}
+#endif
 };
 
 #define VALUE_COUNT (sizeof(valueTable) / sizeof(clivalue_t))

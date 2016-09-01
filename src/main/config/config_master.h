@@ -119,6 +119,11 @@ typedef struct master_t {
 
     uint8_t magic_ef;                       // magic number, should be 0xEF
     uint8_t chk;                            // XOR checksum
+#ifdef NRF24_ARD
+    uint8_t nrfChannel;
+    uint32_t nrfReadingPipe;
+    uint32_t nrfWritingPipe;
+#endif
 } master_t;
 
 extern master_t masterConfig;
