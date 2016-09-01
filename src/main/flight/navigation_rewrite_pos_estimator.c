@@ -108,6 +108,7 @@ typedef struct {
     uint32_t    lastUpdateTime; // Last update time (us)
     t_fp_vector pos;
     t_fp_vector vel;
+    float       baroOffset;
     float       surface;
     float       surfaceVel;
     float       eph;
@@ -528,6 +529,40 @@ static void updateEstimatedTopic(uint32_t currentTime)
     /* GPS correction for velocity might be used on all aircrafts */
     bool useGpsZVel = isGPSValid;
 
+    /* Estimate validity */
+    bool isEstXYValid = (posEstimator.est.eph < posControl.navConfig->inav.max_eph_epv);
+    bool isEstZValid = (posEstimator.est.epv < posControl.navConfig->inav.max_eph_epv);
+
+    /* Handle GPS loss and recovery */
+    if (isGPSValid) {
+        bool positionWasReset = false;
+
+        /* If GPS is valid and our estimate is NOT valid - reset it to GPS coordinates and velocity */
+        if (!isEstXYValid) {
+            posEstimator.est.pos.V.X = posEstimator.gps.pos.V.X;
+            posEstimator.est.pos.V.Y = posEstimator.gps.pos.V.Y;
+            posEstimator.est.vel.V.X = posEstimator.gps.vel.V.X;
+            posEstimator.est.vel.V.Y = posEstimator.gps.vel.V.Y;
+            positionWasReset = true;
+        }
+
+        if (!isEstZValid && useGpsZPos) {
+            posEstimator.est.pos.V.Z = posEstimator.gps.pos.V.Z;
+            posEstimator.est.vel.V.Z = posEstimator.gps.vel.V.Z;
+            positionWasReset = true;
+        }
+
+        /* If position was reset we need to reset history as well */
+        if (positionWasReset) {
+            for (int i = 0; i < INAV_HISTORY_BUF_SIZE; i++) {
+                posEstimator.history.pos[i] = posEstimator.est.pos;
+                posEstimator.history.vel[i] = posEstimator.est.vel;
+            }
+
+            posEstimator.history.index = 0;
+        }
+    }
+
     /* Pre-calculate history index for GPS delay compensation */
     int gpsHistoryIndex = (posEstimator.history.index - 1) - constrain(((int)posControl.navConfig->inav.gps_delay_ms / (1000 / INAV_POSITION_PUBLISH_RATE_HZ)), 0, INAV_HISTORY_BUF_SIZE - 1);
     if (gpsHistoryIndex < 0) {
@@ -549,10 +584,6 @@ static void updateEstimatedTopic(uint32_t currentTime)
     float gpsResidual[3][2];
     float baroResidual;
 
-    if (isBaroValid) {
-        baroResidual = (isAirCushionEffectDetected ? posEstimator.state.baroGroundAlt : posEstimator.baro.alt) - posEstimator.est.pos.V.Z;
-    }
-
     if (isGPSValid) {
         gpsResidual[X][0] = posEstimator.gps.pos.V.X - posEstimator.history.pos[gpsHistoryIndex].V.X;
         gpsResidual[Y][0] = posEstimator.gps.pos.V.Y - posEstimator.history.pos[gpsHistoryIndex].V.Y;
@@ -560,6 +591,16 @@ static void updateEstimatedTopic(uint32_t currentTime)
         gpsResidual[X][1] = posEstimator.gps.vel.V.X - posEstimator.history.vel[gpsHistoryIndex].V.X;
         gpsResidual[Y][1] = posEstimator.gps.vel.V.Y - posEstimator.history.vel[gpsHistoryIndex].V.Y;
         gpsResidual[Z][1] = posEstimator.gps.vel.V.Z - posEstimator.history.vel[gpsHistoryIndex].V.Z;
+    }
+
+    if (isBaroValid) {
+        /* If we are going to use GPS Z-position - calculate and apply barometer offset */
+        if (useGpsZPos) {
+            posEstimator.est.baroOffset += ((posEstimator.baro.alt - posEstimator.gps.pos.V.Z) - posEstimator.est.baroOffset) * posControl.navConfig->inav.w_z_gps_p;
+            posEstimator.baro.alt -= posEstimator.est.baroOffset;
+        }
+
+        baroResidual = (isAirCushionEffectDetected ? posEstimator.state.baroGroundAlt : posEstimator.baro.alt) - posEstimator.est.pos.V.Z;
     }
 
     /* Correction step: Z-axis */
@@ -729,6 +770,10 @@ void initializePositionEstimator(void)
     posEstimator.gps.lastUpdateTime = 0;
     posEstimator.baro.lastUpdateTime = 0;
     posEstimator.sonar.lastUpdateTime = 0;
+
+    posEstimator.est.surface = 0;
+    posEstimator.est.surfaceVel = 0;
+    posEstimator.est.baroOffset = 0;
 
     posEstimator.history.index = 0;
 
