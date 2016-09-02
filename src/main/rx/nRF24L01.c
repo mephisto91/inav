@@ -12,7 +12,6 @@
 
 #include "drivers/sensor.h"
 
-#include "drivers/system.h"
 #include "drivers/bus_spi_soft.h"
 
 #include "fc/rc_controls.h"
@@ -21,6 +20,54 @@
 
 #include "rx/rx.h"
 #include "rx/nRF24L01.h"
+
+//
+
+#include "common/maths.h"
+#include "common/axis.h"
+#include "common/color.h"
+#include "common/utils.h"
+
+#include "drivers/gpio.h"
+#include "drivers/serial.h"
+#include "drivers/compass.h"
+#include "drivers/timer.h"
+#include "drivers/pwm_rx.h"
+#include "drivers/accgyro.h"
+#include "drivers/light_led.h"
+
+#include "sensors/sensors.h"
+#include "sensors/boardalignment.h"
+#include "sensors/rangefinder.h"
+#include "sensors/compass.h"
+#include "sensors/acceleration.h"
+#include "sensors/barometer.h"
+#include "sensors/gyro.h"
+
+#include "io/beeper.h"
+#include "io/display.h"
+#include "io/escservo.h"
+#include "io/gimbal.h"
+#include "io/gps.h"
+#include "io/ledstrip.h"
+#include "io/serial.h"
+#include "io/serial_cli.h"
+#include "io/serial_msp.h"
+#include "io/statusindicator.h"
+
+#include "rx/msp.h"
+
+#include "telemetry/telemetry.h"
+
+#include "flight/mixer.h"
+#include "flight/failsafe.h"
+#include "flight/imu.h"
+#include "flight/navigation_rewrite.h"
+
+#include "config/config.h"
+#include "config/config_profile.h"
+#include "config/config_master.h"
+//
 
 #ifdef NRF24_ARD
 
@@ -109,14 +156,18 @@ void resetPayload()
 // *** All settings here must match the transmitter! ***
 void startAsPrimaryReceiver()
 {
-    nrf24_setChannel(NRF_CHANNEL);
+    //nrf24_setChannel(NRF_CHANNEL);
+    nrf24_setChannel(masterConfig.nrfChannel);
     nrf24_setDataRate(RF24_250KBPS);
     
     nrf24_setAutoAck(false);
     nrf24_setPayloadSize(CONTROL_FRAME_SIZE);
     
-    nrf24_openReadingPipe(1, CONTROL_PIPE);
-    nrf24_openWritingPipe(TELEM_PIPE);
+    //nrf24_openReadingPipe(1, CONTROL_PIPE);
+    //nrf24_openWritingPipe(TELEM_PIPE);
+    nrf24_openReadingPipe(1, masterConfig.nrfControlPipe);
+    nrf24_openWritingPipe(masterConfig.nrfTelemetryPipe);
+    
     nrf24_startListening();
 }
 
@@ -191,8 +242,8 @@ uint32_t telemetryLastSendTime; //Telemetry last send time
 #define CE_L SOFTSPI_CE_L(nrf24SoftSPIDevice)
 #define CE_H SOFTSPI_CE_H(nrf24SoftSPIDevice)
 
-#define MIN(a, b) ((a) < (b) ? (a) : (b))
-#define MAX(a, b) ((a) > (b) ? (a) : (b))
+#define MIN_(a, b) ((a) < (b) ? (a) : (b))
+#define MAX_(a, b) ((a) > (b) ? (a) : (b))
 
 #define _BV(x) (1<<(x))
 
@@ -362,7 +413,7 @@ uint8_t nrf24_write_payload(const uint8_t* buf, uint8_t len)
     
     const uint8_t* current = buf;
     
-    uint8_t data_len = MIN(len,payload_size);
+    uint8_t data_len = MIN_(len,payload_size);
     uint8_t blank_len = dynamic_payloads_enabled ? 0 : payload_size - data_len;
     
     CSN_L;
@@ -383,7 +434,7 @@ uint8_t nrf24_read_payload(uint8_t* buf, uint8_t len)
     uint8_t status;
     uint8_t* current = buf;
     
-    uint8_t data_len = MIN(len,payload_size);
+    uint8_t data_len = MIN_(len,payload_size);
     uint8_t blank_len = dynamic_payloads_enabled ? 0 : payload_size - data_len;
     
     CSN_L;
@@ -589,7 +640,7 @@ bool nrf24_setChannel(uint8_t channel)
     // done in setChannel() to require certain channel spacing.
     
     const uint8_t max_channel = 127;
-    uint8_t val = MIN(channel,max_channel);
+    uint8_t val = MIN_(channel,max_channel);
     nrf24_write_register(NRF24_RF_CH,val);
     return nrf24_read_register(NRF24_RF_CH) == val;
 }
@@ -599,7 +650,7 @@ bool nrf24_setChannel(uint8_t channel)
 void nrf24_setPayloadSize(uint8_t size)
 {
     const uint8_t max_payload_size = 32;
-    payload_size = MIN(size,max_payload_size);
+    payload_size = MIN_(size,max_payload_size);
 }
 
 /****************************************************************************/
@@ -860,7 +911,7 @@ void nrf24_openWritingPipe(uint64_t value)
     nrf24_write_buffer(NRF24_TX_ADDR, (uint8_t*)(&value), 5);
     
     const uint8_t max_payload_size = 32;
-    nrf24_write_register(NRF24_RX_PW_P0,MIN(payload_size,max_payload_size));
+    nrf24_write_register(NRF24_RX_PW_P0,MIN_(payload_size,max_payload_size));
 }
 
 /****************************************************************************/
@@ -976,7 +1027,7 @@ void nrf24_writeAckPayload(uint8_t pipe, const void* buf, uint8_t len)
     //nrf24_readwrite( W_ACK_PAYLOAD | ( pipe & B111 ) );
     nrf24_readwrite( NRF24_W_ACK_PAYLOAD | ( pipe & 7 ) );
     const uint8_t max_payload_size = 32;
-    uint8_t data_len = MIN(len,max_payload_size);
+    uint8_t data_len = MIN_(len,max_payload_size);
     while ( data_len-- )
         nrf24_readwrite(*current++);
     

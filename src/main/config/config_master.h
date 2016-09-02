@@ -121,8 +121,8 @@ typedef struct master_t {
     uint8_t chk;                            // XOR checksum
 #ifdef NRF24_ARD
     uint8_t nrfChannel;
-    uint32_t nrfReadingPipe;
-    uint32_t nrfWritingPipe;
+    uint32_t nrfControlPipe;
+    uint32_t nrfTelemetryPipe;
 #endif
 } master_t;
 
