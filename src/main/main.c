@@ -263,7 +263,7 @@ void init(void)
     pwm_params.useSerialRx = feature(FEATURE_RX_SERIAL);
 
 #ifdef USE_SERVOS
-    pwm_params.useServos = isServoOutputEnabled();
+    pwm_params.useServos = isMixerUsingServos();
     pwm_params.useChannelForwarding = feature(FEATURE_CHANNEL_FORWARDING);
     pwm_params.servoCenterPulse = masterConfig.escAndServoConfig.servoCenterPulse;
     pwm_params.servoPwmRate = masterConfig.servo_pwm_rate;
@@ -615,7 +615,7 @@ int main(void)
 #endif
 #ifdef MAG
     setTaskEnabled(TASK_COMPASS, sensors(SENSOR_MAG));
-#if defined(MPU6500_SPI_INSTANCE) && defined(USE_MAG_AK8963)
+#if (defined(MPU6500_SPI_INSTANCE) || defined(MPU9250_SPI_INSTANCE)) && defined(USE_MAG_AK8963)
     // fixme temporary solution for AK6983 via slave I2C on MPU9250
     rescheduleTask(TASK_COMPASS, 1000000 / 40);
 #endif

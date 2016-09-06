@@ -432,7 +432,16 @@ retry:
                 break;
             }
 #endif
-
+        case ACC_MPU9250:
+#ifdef USE_ACC_SPI_MPU9250
+            if (mpu9250SpiAccDetect(&acc)) {
+#ifdef ACC_MPU9250_ALIGN
+                accAlign = ACC_MPU9250_ALIGN;
+#endif
+                accHardware = ACC_MPU9250;
+                break;
+            }
+#endif
             ; // fallthrough
         case ACC_FAKE:
 #ifdef USE_FAKE_ACC
@@ -497,14 +506,6 @@ static bool detectBaro(baroSensor_e baroHardwareToUse)
         case BARO_DEFAULT:
             ; // fallthough
 
-        case BARO_MS5611:
-#ifdef USE_BARO_MS5611
-            if (ms5611Detect(&baro)) {
-                baroHardware = BARO_MS5611;
-                break;
-            }
-#endif
-            ; // fallthough
         case BARO_BMP085:
 #ifdef USE_BARO_BMP085
             if (bmp085Detect(bmp085Config, &baro)) {
@@ -513,6 +514,14 @@ static bool detectBaro(baroSensor_e baroHardwareToUse)
             }
 #endif
         ; // fallthough
+        case BARO_MS5611:
+#ifdef USE_BARO_MS5611
+            if (ms5611Detect(&baro)) {
+                baroHardware = BARO_MS5611;
+                break;
+            }
+#endif
+            ; // fallthough
         case BARO_BMP280:
 #ifdef USE_BARO_BMP280
             if (bmp280Detect(&baro)) {

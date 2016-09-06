@@ -21,9 +21,11 @@
 
 #include "platform.h"
 
+#include "build/build_config.h"
+#include "logging.h"
+
 #ifdef BOOTLOG
 
-#include "logging.h"
 #include "system.h"
 
 #define MAX_BOOTLOG_ENTRIES     64
@@ -49,6 +51,7 @@ static const char *     eventDescription[BOOT_EVENT_CODE_COUNT] = {
     [BOOT_EVENT_MAG_DETECTION]              = "MAG_DETECTION",
     [BOOT_EVENT_RANGEFINDER_DETECTION]      = "RANGEFINDER_DETECTION",
     [BOOT_EVENT_MAG_INIT_FAILED]            = "MAG_INIT_FAILED",
+    [BOOT_EVENT_HMC5883L_READ_OK_COUNT]     = "HMC5883L_READ_OK_COUNT",
     [BOOT_EVENT_HMC5883L_READ_FAILED]       = "HMC5883L_READ_FAILED",
     [BOOT_EVENT_HMC5883L_SATURATION]        = "HMC5883L_SATURATION",
     [BOOT_EVENT_TIMER_CH_SKIPPED]           = "TIMER_CHANNEL_SKIPPED",
@@ -130,4 +133,15 @@ void addBootlogEvent6(bootLogEventCode_e eventCode, uint16_t eventFlags, uint16_
     event.params.u16[3] = param4;
     addBootlogEntry(&event);
 }
+#else
+const char * getBootlogEventDescription(bootLogEventCode_e eventCode) {UNUSED(eventCode);return NULL;}
+void initBootlog(void) {}
+int getBootlogEventCount(void) {return 0;}
+bootLogEntry_t * getBootlogEvent(int index) {UNUSED(index);return NULL;}
+void addBootlogEvent2(bootLogEventCode_e eventCode, uint16_t eventFlags)
+    {UNUSED(eventCode);UNUSED(eventFlags);}
+void addBootlogEvent4(bootLogEventCode_e eventCode, uint16_t eventFlags, uint32_t param1, uint32_t param2)
+    {UNUSED(eventCode);UNUSED(eventFlags);UNUSED(param1);UNUSED(param2);}
+void addBootlogEvent6(bootLogEventCode_e eventCode, uint16_t eventFlags, uint16_t param1, uint16_t param2, uint16_t param3, uint16_t param4)
+    {UNUSED(eventCode);UNUSED(eventFlags);UNUSED(param1);UNUSED(param2);UNUSED(param3);UNUSED(param4);}
 #endif
