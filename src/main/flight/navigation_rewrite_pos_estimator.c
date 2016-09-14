@@ -56,8 +56,10 @@
  * Based on INAV position estimator for PX4 by Anton Babushkin <anton.babushkin@me.com>
  * @author Konstantin Sharlaimov <konstantin.sharlaimov@gmail.com>
  */
-#define INAV_GPS_EPV        500.0f  // 5m GPS VDOP
-#define INAV_GPS_EPH        200.0f  // 2m GPS HDOP  (gives about 1.6s of dead-reckoning if GPS is temporary lost)
+#define INAV_GPS_DEFAULT_EPH                200.0f  // 2m GPS HDOP  (gives about 1.6s of dead-reckoning if GPS is temporary lost)
+#define INAV_GPS_DEFAULT_EPV                500.0f  // 5m GPS VDOP
+
+#define INAV_GPS_ACCEPTANCE_EPE             500.0f  // 5m acceptance radius
 
 #define INAV_GPS_GLITCH_RADIUS              250.0f  // 2.5m GPS glitch radius
 #define INAV_GPS_GLITCH_ACCEL               1000.0f // 10m/s/s max possible acceleration for GPS glitch detection
@@ -326,8 +328,14 @@ void onNewGPSData(void)
 #endif
 
                 /* FIXME: use HDOP/VDOP */
-                posEstimator.gps.eph = INAV_GPS_EPH;
-                posEstimator.gps.epv = INAV_GPS_EPV;
+                if (gpsSol.flags.validEPE) {
+                    posEstimator.gps.eph = gpsSol.eph;
+                    posEstimator.gps.epv = gpsSol.epv;
+                }
+                else {
+                    posEstimator.gps.eph = INAV_GPS_DEFAULT_EPH;
+                    posEstimator.gps.epv = INAV_GPS_DEFAULT_EPV;
+                }
 
                 /* Indicate a last valid reading of Pos/Vel */
                 posEstimator.gps.lastUpdateTime = currentTime;
@@ -461,6 +469,11 @@ static void updateIMUTopic(void)
     }
 }
 
+static float updateEPE(const float oldEPE, const float dt, const float newEPE, const float w)
+{
+    return oldEPE + (newEPE - oldEPE) * w * dt;
+}
+
 /**
  * Calculate next estimate using IMU and apply corrections from reference sensors (GPS, BARO etc)
  *  Function is called at main loop rate
@@ -543,12 +556,14 @@ static void updateEstimatedTopic(uint32_t currentTime)
             posEstimator.est.pos.V.Y = posEstimator.gps.pos.V.Y;
             posEstimator.est.vel.V.X = posEstimator.gps.vel.V.X;
             posEstimator.est.vel.V.Y = posEstimator.gps.vel.V.Y;
+            posEstimator.est.eph = posEstimator.gps.eph;
             positionWasReset = true;
         }
 
         if (!isEstZValid && useGpsZPos) {
             posEstimator.est.pos.V.Z = posEstimator.gps.pos.V.Z;
             posEstimator.est.vel.V.Z = posEstimator.gps.vel.V.Z;
+            posEstimator.est.epv = posEstimator.gps.epv;
             positionWasReset = true;
         }
 
@@ -605,25 +620,30 @@ static void updateEstimatedTopic(uint32_t currentTime)
 
     /* Correction step: Z-axis */
     if ((posEstimator.est.epv < posControl.navConfig->inav.max_eph_epv) || useGpsZPos || isBaroValid) {
+        float gpsWeightScaler = 1.0f;
+
 #if defined(BARO)
         if (isBaroValid) {
             /* Apply only baro correction, no sonar */
             inavFilterCorrectPos(Z, dt, baroResidual, posControl.navConfig->inav.w_z_baro_p);
 
             /* Adjust EPV */
-            posEstimator.est.epv = MIN(posEstimator.est.epv, posEstimator.baro.epv);
+            posEstimator.est.epv = updateEPE(posEstimator.est.epv, dt, posEstimator.baro.epv, posControl.navConfig->inav.w_z_baro_p);
         }
 #endif
 
         /* Apply GPS correction to altitude */
         if (useGpsZPos) {
-            inavFilterCorrectPos(Z, dt, gpsResidual[Z][0], posControl.navConfig->inav.w_z_gps_p);
-            posEstimator.est.epv = MIN(posEstimator.est.epv, posEstimator.gps.epv);
+            gpsWeightScaler = scaleRangef(bellCurve(gpsResidual[Z][0], INAV_GPS_ACCEPTANCE_EPE), 0.0f, 1.0f, 0.1f, 1.0f);
+            inavFilterCorrectPos(Z, dt, gpsResidual[Z][0], posControl.navConfig->inav.w_z_gps_p * gpsWeightScaler);
+
+            /* Adjust EPV */
+            posEstimator.est.epv = updateEPE(posEstimator.est.epv, dt, MAX(posEstimator.gps.epv, gpsResidual[Z][0]), posControl.navConfig->inav.w_z_gps_p);
         }
 
         /* Apply GPS correction to climb rate */
         if (useGpsZVel) {
-            inavFilterCorrectVel(Z, dt, gpsResidual[Z][1], posControl.navConfig->inav.w_z_gps_v);
+            inavFilterCorrectVel(Z, dt, gpsResidual[Z][1], posControl.navConfig->inav.w_z_gps_v * sq(gpsWeightScaler));
         }
     }
     else {
@@ -634,14 +654,19 @@ static void updateEstimatedTopic(uint32_t currentTime)
     if ((posEstimator.est.eph < posControl.navConfig->inav.max_eph_epv) || isGPSValid) {
         /* Correct position from GPS - always if GPS is valid */
         if (isGPSValid) {
-            inavFilterCorrectPos(X, dt, gpsResidual[X][0], posControl.navConfig->inav.w_xy_gps_p);
-            inavFilterCorrectPos(Y, dt, gpsResidual[Y][0], posControl.navConfig->inav.w_xy_gps_p);
+            const float gpsResidualMagnitude = sqrtf(sq(gpsResidual[X][0]) + sq(gpsResidual[X][1]));
+            const float gpsWeightScaler = scaleRangef(bellCurve(gpsResidualMagnitude, INAV_GPS_ACCEPTANCE_EPE), 0.0f, 1.0f, 0.1f, 1.0f);
+            const float w_xy_gps_p = posControl.navConfig->inav.w_xy_gps_p * gpsWeightScaler;
+            const float w_xy_gps_v = posControl.navConfig->inav.w_xy_gps_v * sq(gpsWeightScaler);
 
-            inavFilterCorrectVel(X, dt, gpsResidual[X][1], posControl.navConfig->inav.w_xy_gps_v);
-            inavFilterCorrectVel(Y, dt, gpsResidual[Y][1], posControl.navConfig->inav.w_xy_gps_v);
+            inavFilterCorrectPos(X, dt, gpsResidual[X][0], w_xy_gps_p);
+            inavFilterCorrectPos(Y, dt, gpsResidual[Y][0], w_xy_gps_p);
+
+            inavFilterCorrectVel(X, dt, gpsResidual[X][1], w_xy_gps_v);
+            inavFilterCorrectVel(Y, dt, gpsResidual[Y][1], w_xy_gps_v);
 
             /* Adjust EPH */
-            posEstimator.est.eph = MIN(posEstimator.est.eph, posEstimator.gps.eph);
+            posEstimator.est.eph = updateEPE(posEstimator.est.eph, dt, MAX(posEstimator.gps.eph, gpsResidualMagnitude), posControl.navConfig->inav.w_xy_gps_p);
         }
     }
     else {
@@ -746,6 +771,11 @@ static void publishEstimatedTopic(uint32_t currentTime)
         if (posEstimator.history.index >= INAV_HISTORY_BUF_SIZE) {
             posEstimator.history.index = 0;
         }
+
+#if defined(NAV_BLACKBOX)
+        navEPH = posEstimator.est.eph;
+        navEPV = posEstimator.est.epv;
+#endif
     }
 }
 
