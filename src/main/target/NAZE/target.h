@@ -94,8 +94,8 @@
 #define ACC_MPU6500_ALIGN       CW0_DEG
 
 #define BARO
-#define USE_BARO_MS5611 // needed for Flip32 board
-#define USE_BARO_BMP085
+//#define USE_BARO_MS5611 // needed for Flip32 board
+//#define USE_BARO_BMP085
 #define USE_BARO_BMP280
 
 #define MAG
