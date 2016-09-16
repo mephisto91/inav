@@ -366,7 +366,7 @@ uint32_t getPidUpdateRate(void) {
     }
 }
 
-uint16_t getGyroUpdateRate(void) {
+uint32_t getGyroUpdateRate(void) {
     return gyro.targetLooptime;
 }
 
