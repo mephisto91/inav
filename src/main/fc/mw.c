@@ -674,7 +674,13 @@ void taskGyro(void) {
         }
     }
 
+    /* Update actual hardware readings */
     gyroUpdate();
+
+#ifdef ASYNC_GYRO_PROCESSING
+    /* Update IMU for better accuracy */
+    imuUpdateGyroscope(currentDeltaTime + (micros() - currentTime));
+#endif
 }
 
 #ifdef ASYNC_GYRO_PROCESSING
