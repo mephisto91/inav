@@ -134,9 +134,9 @@ nrf24Telem telem;
 
 #define NRF24_FAILSAFE_TIME_MS  1300
 
-#define NRF_CHANNEL             115
-#define CONTROL_PIPE            0xE8E8F0F0E1
-#define TELEM_PIPE              0xE8E8F0F0E2
+//#define NRF_CHANNEL             115
+//#define CONTROL_PIPE            0xE8E8F0F0E1
+//#define TELEM_PIPE              0xE8E8F0F0E2
 
 #define CONTROL_FRAME_SIZE      20
 #define TELEM_FRAME_SIZE        10
@@ -569,7 +569,7 @@ void rxNRF24InitArd(rxRuntimeConfig_t *rxRuntimeConfig, rcReadRawDataPtr *callba
     // This channel should be universally safe and not bleed over into adjacent
     // spectrum.
     
-    nrf24_setChannel(NRF_CHANNEL);
+    nrf24_setChannel(masterConfig.nrfChannel);
     
     // Flush buffers
     nrf24_flush_rx();
